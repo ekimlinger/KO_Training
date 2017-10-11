@@ -44,14 +44,64 @@ function ReservationsViewModel() {
           total += self.seats()[i].meal().price;
       }
       return total;
-  });
+  }, this);
       
 }
 
 ko.applyBindings(new ReservationsViewModel());
 
 /*****************************************************************************/
+// Loading and saving data
 
+function Task(data) {
+  this.title = ko.observable(data.title);
+  this.isDone = ko.observable(data.isDone);
+}
+
+function TaskListViewModel() {
+  // Data
+  var self = this;
+  self.tasks = ko.observableArray([]);
+  self.newTaskText = ko.observable();
+  self.incompleteTasks = ko.computed(function() {
+      return ko.utils.arrayFilter(self.tasks(), function(task) { return !task.isDone() && !task._destroy });
+  });
+
+  // Operations
+  self.addTask = function() {
+      self.tasks.push(new Task({ title: this.newTaskText() }));
+      self.newTaskText("");
+  };
+  //Old
+  //self.removeTask = function(task) { self.tasks.remove(task) };
+  self.removeTask = function(task) {self.tasks.destroy(task); };
+  /*
+      If you save the data now, you'll see that the server still receives the 
+      destroyed items, and it can tell which ones you're asking to delete 
+      (because they have a _destroy property set to true).
+  */
+  
+  
+  
+  self.save = function() {
+      $.ajax("/tasks", {
+          data: ko.toJSON({tasks: self.tasks }),
+          type: "post",
+          contentType: "application/json",
+          success: function(result) { alert(result) /*or something useful*/}
+      });
+  };
+  
+  // On load
+  $.getJSON("/tasks", function(allData) {
+      var mappedTasks = $.map(allData, function(item) {
+          return new Task(item); 
+      });
+      self.tasks(mappedTasks);
+  });
+}
+
+ko.applyBindings(new TaskListViewModel());
 
 
 /*****************************************************************************/
